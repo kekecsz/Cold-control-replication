@@ -74,7 +74,7 @@ return(BF)
 
 
 
-iterations = 1000
+iterations = 100
 
 ### original study data
 # mean_exp = 50.61047 # mean Stroop interference in the volitional condition
