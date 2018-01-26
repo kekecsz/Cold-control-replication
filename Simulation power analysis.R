@@ -1,5 +1,6 @@
 
 library(progress)
+library(MASS)
 
 # BF calculation function
 Bf<-function(sd, obtained, dfdata, meanoftheory, sdtheory, dftheory, tail = 2)
@@ -39,24 +40,35 @@ simulate_PLC_study <- function(N,
                                mean_exp,
                                SD_exp,
                                mean_con,
-                               SD_con){
+                               SD_con,
+                               correlation){
 
 pb$tick() # progress bar tick (useful to track progress of long analyses)
 
-# empty data frame
-data = as.data.frame(matrix(NA, nrow = N, ncol = num_conditions))
+# generate two correlated random variables with mean = 0 and sd = 1
+data = as.data.frame(  mvrnorm(N, mu = c(0, 0),
+                               Sigma = matrix(c(1, correlation,
+                                                correlation, 1),
+                                              ncol = 2, byrow = TRUE),
+                               empirical = F))
 names(data) = c("outcome_exp", "outcome_con")
 
+# transform these variables to match mean and sd from pilot study
+data[,"outcome_exp"] = data[,"outcome_exp"] * SD_exp + mean_exp
+data[,"outcome_con"] = data[,"outcome_con"] * SD_con + mean_con
+
+
+
 # generate simulated data based on pilot study derived mean and sd data
-data[,"outcome_exp"] = rnorm(N, mean = mean_exp, sd = SD_exp)
-data[,"outcome_con"] = rnorm(N, mean = mean_con, sd = SD_con)
+# data[,"outcome_exp"] = rnorm(N, mean = mean_exp, sd = SD_exp)
+# data[,"outcome_con"] = rnorm(N, mean = mean_con, sd = SD_con)
 
 # extract Bayes Factor
 # the analysis uses sequential analysis and optional stopping if BF < 0.333 or BF > 3.
 # the Bf code was imported from the pilot_analysis.Rmd file
 # doing analysis after every participant after reaching N = 20
-for(i in 20:N){
-# for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
+#for(i in 20:N){
+ for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
   data_current = data[1:i,]
   effect <- t.test(data[,"outcome_exp"], data[,"outcome_con"], paired=TRUE)
   BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = 30, dftheory = 10000, tail = 1)
@@ -64,8 +76,12 @@ for(i in 20:N){
   if(BF < 0.3333){break}
 }
 
+mean_dif = mean(data_current[,"outcome_exp"] - data_current[,"outcome_con"])
+sd_dif = sd(data_current[,"outcome_exp"] - data_current[,"outcome_con"])
+cor = cor(data[,"outcome_exp"], data[,"outcome_con"])
+
 # the function returns the Bayes Factor value at the stopping point of the study
-return(BF)
+return(c(BF, mean_dif, sd_dif, cor))
 }
 
 
@@ -74,13 +90,14 @@ return(BF)
 
 
 
-iterations = 100
+iterations = 1000
 
-### original study data
+### original pilot study data
 # mean_exp = 50.61047 # mean Stroop interference in the volitional condition
 # SD_exp = 54.79365 # sd of Stroop interference in the volitional condition
 # mean_con = 25.66169 # mean Stroop interference in the suggestion condition
 # SD_con = 49.86554 # sd of Stroop interference in the suggestion condition
+
 
 pb <- progress_bar$new(
   format = " simulation progress [:bar] :percent eta: :eta",
@@ -92,11 +109,24 @@ out = replicate(iterations,
                                    mean_exp = 50.61047,
                                    SD_exp = 54.79365,
                                    mean_con = 25.66169,
-                                   SD_con = 49.86554))
+                                   SD_con = 49.86554,
+                                   correlation = 0.1729514))
 
+out_table = as.data.frame(t(out))
+names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
 
-mean(out > 3) # 0.859
-mean(out < 0.3333) # 0.001
+# just to check if the simulation produced the desired mean difference and correlation
+# the original study had the following parameters:
+# mean_dif = 24.94878 # mean difference of Stroop interference between the suggestion and violation condition
+# sd_dif = 67.40772 # sd of difference of Stroop interference between the suggestion and violation condition
+# cor = 0.1729514 # correlation of the Stroop interference between the suggestion and violation condition
+
+mean(out_table[,"mean_dif"])
+mean(out_table[,"sd_dif"])
+mean(out_table[,"cor"])
+
+mean(out_table[,"BF"] > 3) # 0.859
+mean(out_table[,"BF"] < 0.3333) # 0.001
 
 
 ### original study data
@@ -113,11 +143,15 @@ out = replicate(iterations,
                                    mean_exp = 25,
                                    SD_exp = 50,
                                    mean_con = 25,
-                                   SD_con = 50))
+                                   SD_con = 50,
+                                   correlation = 0.1729514))
 
 
-mean(out > 3) # 0.026
-mean(out < 0.3333) # 0.598
+out_table = as.data.frame(t(out))
+names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
+
+mean(out_table[,"BF"] > 3) # 0.024
+mean(out_table[,"BF"] < 0.3333) # 0.665
 
 
 ### original study data
@@ -129,16 +163,24 @@ pb <- progress_bar$new(
   total = iterations, clear = FALSE, width= 60)
 
 out = replicate(iterations, 
-                simulate_PLC_study(N = 270,
+                simulate_PLC_study(N = 250,
                                    num_conditions = 2,
                                    mean_exp = 25,
                                    SD_exp = 50,
                                    mean_con = 25,
-                                   SD_con = 50))
+                                   SD_con = 50,
+                                   correlation = 0.1729514))
 
 
-mean(out > 3) # 0.009
-mean(out < 0.3333) # 0.811
+
+out_table = as.data.frame(t(out))
+names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
+
+mean(out_table[,"BF"] > 3) # 0.009
+mean(out_table[,"BF"] < 0.3333) # 0.806
+
+
+
 
 
 
