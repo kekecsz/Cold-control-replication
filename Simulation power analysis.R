@@ -67,8 +67,8 @@ data[,"outcome_con"] = data[,"outcome_con"] * SD_con + mean_con
 # the analysis uses sequential analysis and optional stopping if BF < 0.333 or BF > 3.
 # the Bf code was imported from the pilot_analysis.Rmd file
 # doing analysis after every participant after reaching N = 20
-#for(i in 20:N){
- for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
+for(i in 20:N){
+#for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
   data_current = data[1:i,]
   effect <- t.test(data[,"outcome_exp"], data[,"outcome_con"], paired=TRUE)
   BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = 30, dftheory = 10000, tail = 1)
