@@ -41,7 +41,8 @@ simulate_PLC_study <- function(N,
                                SD_exp,
                                mean_con,
                                SD_con,
-                               correlation){
+                               correlation,
+                               sdtheory){
 
 pb$tick() # progress bar tick (useful to track progress of long analyses)
 
@@ -71,7 +72,7 @@ data[,"outcome_con"] = data[,"outcome_con"] * SD_con + mean_con
  for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
   data_current = data[1:i,]
   effect <- t.test(data[,"outcome_exp"], data[,"outcome_con"], paired=TRUE)
-  BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = 50, dftheory = 10000, tail = 1)
+  BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = sdtheory, dftheory = 10000, tail = 1)
   if(BF > 3){break}
   if(BF < 0.3333){break}
 }
@@ -90,7 +91,7 @@ return(c(BF, mean_dif, sd_dif, cor))
 
 
 
-iterations = 10000
+iterations = 1000
 
 ### original pilot study data
 # mean_exp = 50.61047 # mean Stroop interference in the volitional condition
@@ -110,7 +111,8 @@ out = replicate(iterations,
                                    SD_exp = 54.79365,
                                    mean_con = 25.66169,
                                    SD_con = 49.86554,
-                                   correlation = 0.1729514))
+                                   correlation = 0.1729514,
+                                   sdtheory = 50)) # sdtheory was set to 30 in the pilot study
 
 out_table = as.data.frame(t(out))
 names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
@@ -129,8 +131,48 @@ mean(out_table[,"BF"] > 3) # 0.87
 mean(out_table[,"BF"] < 0.3333) # 0.0069
 
 
-### original study data
-# assuming SD = 50 in stroop interference in both groups, and means equal in the two conditions
+
+
+
+### Assuming smaller true difference between the stroop interference in the two conditions (mean_exp and mean_con)
+
+pb <- progress_bar$new(
+  format = " simulation progress [:bar] :percent eta: :eta",
+  total = iterations, clear = FALSE, width= 60)
+
+out = replicate(iterations, 
+                simulate_PLC_study(N = 80,
+                                   num_conditions = 2,
+                                   mean_exp = 45,
+                                   SD_exp = 50,
+                                   mean_con = 25,
+                                   SD_con = 50,
+                                   correlation = 0.1729514,
+                                   sdtheory = 50)) # sdtheory was set to 30 in the pilot study
+
+out_table = as.data.frame(t(out))
+names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
+
+# just to check if the simulation produced the desired mean difference and correlation
+# the original study had the following parameters:
+# mean_dif = 24.94878 # mean difference of Stroop interference between the suggestion and violation condition
+# sd_dif = 67.40772 # sd of difference of Stroop interference between the suggestion and violation condition
+# cor = 0.1729514 # correlation of the Stroop interference between the suggestion and violation condition
+
+mean(out_table[,"mean_dif"])
+mean(out_table[,"sd_dif"])
+mean(out_table[,"cor"])
+
+mean(out_table[,"BF"] > 3) # 0.742
+mean(out_table[,"BF"] < 0.3333) # 0.028
+
+
+
+
+
+
+
+###  assuming SD = 50 in stroop interference in both groups, and means equal in the two conditions
 
 
 pb <- progress_bar$new(
@@ -144,7 +186,8 @@ out = replicate(iterations,
                                    SD_exp = 50,
                                    mean_con = 25,
                                    SD_con = 50,
-                                   correlation = 0.1729514))
+                                   correlation = 0.1729514,
+                                   sdtheory = 50)) # sdtheory was set to 30 in the pilot study
 
 
 out_table = as.data.frame(t(out))
@@ -152,3 +195,4 @@ names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
 
 mean(out_table[,"BF"] > 3) # 0.015
 mean(out_table[,"BF"] < 0.3333) # 0.8146
+
