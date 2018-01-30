@@ -67,11 +67,11 @@ data[,"outcome_con"] = data[,"outcome_con"] * SD_con + mean_con
 # the analysis uses sequential analysis and optional stopping if BF < 0.333 or BF > 3.
 # the Bf code was imported from the pilot_analysis.Rmd file
 # doing analysis after every participant after reaching N = 20
-for(i in 20:N){
-#for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
+#for(i in 20:N){
+ for(i in seq(20,N,10)){ # use this line if you have to test large sample sizes, to reduce procesing time. This simulates analysis after every 10 participants
   data_current = data[1:i,]
   effect <- t.test(data[,"outcome_exp"], data[,"outcome_con"], paired=TRUE)
-  BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = 30, dftheory = 10000, tail = 1)
+  BF = Bf(sd = as.numeric(effect$estimate[1]/effect$statistic[1]), obtained = as.numeric(effect$estimate[1]), dfdata = effect$parameter,  meanoftheory = 0, sdtheory = 50, dftheory = 10000, tail = 1)
   if(BF > 3){break}
   if(BF < 0.3333){break}
 }
@@ -90,7 +90,7 @@ return(c(BF, mean_dif, sd_dif, cor))
 
 
 
-iterations = 1000
+iterations = 10000
 
 ### original pilot study data
 # mean_exp = 50.61047 # mean Stroop interference in the volitional condition
@@ -125,8 +125,8 @@ mean(out_table[,"mean_dif"])
 mean(out_table[,"sd_dif"])
 mean(out_table[,"cor"])
 
-mean(out_table[,"BF"] > 3) # 0.859
-mean(out_table[,"BF"] < 0.3333) # 0.001
+mean(out_table[,"BF"] > 3) # 0.87
+mean(out_table[,"BF"] < 0.3333) # 0.0069
 
 
 ### original study data
@@ -150,38 +150,5 @@ out = replicate(iterations,
 out_table = as.data.frame(t(out))
 names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
 
-mean(out_table[,"BF"] > 3) # 0.024
-mean(out_table[,"BF"] < 0.3333) # 0.665
-
-
-### original study data
-# assuming SD = 50 in stroop interference in both groups, and means equal in the two conditions
-# higher sample size to reach 80% power
-
-pb <- progress_bar$new(
-  format = " simulation progress [:bar] :percent eta: :eta",
-  total = iterations, clear = FALSE, width= 60)
-
-out = replicate(iterations, 
-                simulate_PLC_study(N = 250,
-                                   num_conditions = 2,
-                                   mean_exp = 25,
-                                   SD_exp = 50,
-                                   mean_con = 25,
-                                   SD_con = 50,
-                                   correlation = 0.1729514))
-
-
-
-out_table = as.data.frame(t(out))
-names(out_table) = c("BF", "mean_dif", "sd_dif", "cor")
-
-mean(out_table[,"BF"] > 3) # 0.009
-mean(out_table[,"BF"] < 0.3333) # 0.806
-
-
-
-
-
-
-
+mean(out_table[,"BF"] > 3) # 0.015
+mean(out_table[,"BF"] < 0.3333) # 0.8146
